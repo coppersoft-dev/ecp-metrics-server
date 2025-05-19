@@ -36,7 +36,6 @@ func authReq(w http.ResponseWriter, r *http.Request, expectedToken string) error
 }
 
 func main() {
-
 	var contentMux sync.RWMutex
 	var components cd.Components
 
