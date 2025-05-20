@@ -15,7 +15,7 @@ spec:
         app.kubernetes.io/name: ecp-metrics-server
     spec:
       containers:
-        - image: ghcr.io/coppersoft-dev/ecp-metrics-server:v0.0.2@sha256:b0339f85850f3725c39398fd5d92f6b5d8f2b0532c7c8b557a8eb104c5ced47b
+        - image: ghcr.io/coppersoft-dev/ecp-metrics-server:latest
           imagePullPolicy: IfNotPresent
           name: ecp-metrics-server
           ports:
