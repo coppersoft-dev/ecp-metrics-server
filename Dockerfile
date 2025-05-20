@@ -2,7 +2,7 @@ ARG GO_VERSION=1.24.3-alpine@sha256:ef18ee7117463ac1055f5a370ed18b8750f01589f13e
 ARG XX_VERSION=1.6.1@sha256:923441d7c25f1e2eb5789f82d987693c47b8ed987c4ab3b075d6ed2b5d6779a3
 
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:${XX_VERSION} AS xx
-FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} as builder
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS builder
 
 # Copy the build utilities.
 COPY --from=xx / /
