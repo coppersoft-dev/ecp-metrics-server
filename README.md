@@ -23,3 +23,5 @@ The application is configured through the following environment variables:
 | CD_DB_USER | Username to use for connecting to the Component Directory database |
 | CD_DB_PASS | Password to use for connecting to the Component Directory database |
 | AUTH_TOKEN | The bearer token consumers must pass in the HTTP `Authorization` header for authenticating to the ECP Metrics Server |
+| VERBOSITY | Verbosity of the log output (higher is more verbose, default is 0) |
+| LOG_FORMAT | Format of the log output (`json` or `text`) |
