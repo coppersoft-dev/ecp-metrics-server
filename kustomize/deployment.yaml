@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: ecp-metrics-server
+  name: ecp-metrics-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ecp-metrics-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ecp-metrics-server
+    spec:
+      containers:
+        - image: ghcr.io/coppersoft-dev/ecp-metrics-server:v0.0.1@sha256:3eda858f87ee5264066aee51c1d53a8d633cd14be1ae82702f0e90dfc89e4375
+          imagePullPolicy: IfNotPresent
+          name: ecp-metrics-server
+          ports:
+          - name: http
+            protocol: TCP
+            containerPort: 8080
+          env:
+          - name: CD_DB_HOST
+            value: "ecp-db-r" # Replace with your actual database hostname
+          - name: CD_DB_NAME
+            value: "ecp-central" # Replace with your actual database name
+          - name: CD_DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: ecp-central-db-credentials
+                key: username
+          - name: CD_DB_PASS
+            valueFrom:
+              secretKeyRef:
+                name: ecp-central-db-credentials
+                key: password
+          - name: AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: ecp-metrics-server-auth
+                key: token
