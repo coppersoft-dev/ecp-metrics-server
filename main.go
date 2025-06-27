@@ -1,39 +1,21 @@
 package main
 
 import (
-	"crypto/subtle"
+	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
-	"strings"
-	"sync"
+	"syscall"
 	"time"
 
 	_ "github.com/lib/pq"
 
 	"go.e13.dev/playground/ecp-metrics-server/cd"
+	"go.e13.dev/playground/ecp-metrics-server/server"
 )
-
-func authReq(w http.ResponseWriter, r *http.Request, expectedToken string) error {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-		w.Header().Set("WWW-Authenticate", `Bearer realm="Restricted"`)
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprintln(w, "Unauthorized: Missing or invalid Authorization header")
-		return fmt.Errorf("missing bearer token in Authorization")
-	}
-
-	token := strings.TrimPrefix(authHeader, "Bearer ")
-	if subtle.ConstantTimeCompare([]byte(token), []byte(expectedToken)) != 1 {
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprintln(w, "Unauthorized: Invalid token")
-		return fmt.Errorf("invalid token")
-	}
-
-	return nil
-}
 
 func parseVerbosity(v string) (*int, error) {
 	if v == "" {
@@ -72,9 +54,6 @@ func newLogger(level *slog.LevelVar, hdlrType LogHandlerType) (*slog.Logger, err
 }
 
 func main() {
-	var contentMux sync.RWMutex
-	var components cd.Components
-
 	dbHost := os.Getenv("CD_DB_HOST")
 	dbName := os.Getenv("CD_DB_NAME")
 	dbUser := os.Getenv("CD_DB_USER")
@@ -102,64 +81,78 @@ func main() {
 		logLevel.Set(slog.Level(*customLogLevel))
 	}
 
-	go func() {
-		timer := time.NewTimer(0)
-		var prevErr bool
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(context.Background())
+	errCh := make(chan error)
 
-		for {
-			select {
-			case <-timer.C:
-
-				cdContent, err := cd.GetCDContent(dbUser, dbPass, dbHost, dbName)
-				if err != nil {
-					log.Error("failed reading CD content from database", "error", err)
-					prevErr = true
-					timer.Reset(3 * time.Second)
-					continue
-				}
-				componentsCur, err := cd.ParseCDContent(cdContent)
-				if err != nil {
-					log.Error("failed parsing CD content", "error", err)
-					prevErr = true
-					timer.Reset(3 * time.Second)
-					continue
-				}
-
-				logF := log.Debug
-				if prevErr {
-					prevErr = false
-					logF = log.Info
-				}
-				logF("Parsed CD content")
-
-				contentMux.Lock()
-				components = componentsCur
-				contentMux.Unlock()
-
-				timer.Reset(10 * time.Second)
-			}
-		}
-	}()
-
-	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
-		if err := authReq(w, r, authToken); err != nil {
-			return
-		}
-		for _, broker := range components.ComponentList.Brokers {
-			fmt.Fprintf(w, "ecp_component_version{code=\"%s\",org=\"%s\",type=\"%s\",version=\"%s\"} 1\n", broker.Code, broker.Organization, broker.Type, broker.MADESImplementation.Version)
-		}
-
-		for _, ep := range components.ComponentList.Endpoints {
-			fmt.Fprintf(w, "ecp_component_version{code=\"%s\",org=\"%s\",type=\"%s\",version=\"%s\"} 1\n", ep.Code, ep.Organization, ep.Type, ep.MADESImplementation.Version)
-		}
-
-		for _, cd := range components.ComponentList.ComponentDirectories {
-			fmt.Fprintf(w, "ecp_component_version{code=\"%s\",org=\"%s\",type=\"%s\",version=\"%s\"} 1\n", cd.Code, cd.Organization, cd.Type, cd.MADESImplementation.Version)
-		}
-	})
-
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Error("HTTP listener failed")
+	connStr := fmt.Sprintf("postgresql://%s:%s@%s:5432/%s?sslmode=require", dbUser, dbPass, dbHost, dbName)
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		log.Error("failed opening DB connection", "error", err)
 		os.Exit(1)
 	}
+	defer db.Close()
+
+	// set reasonable connection pooling limits. These limits
+	// are rather low because the applcation currently really
+	// only needs a single open connection.
+	db.SetMaxOpenConns(5)
+	db.SetMaxIdleConns(3)
+
+	go func(ctx context.Context) {
+		ticker := time.NewTicker(30 * time.Second)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				log.Info("db stats", "max_open_conns", db.Stats().MaxOpenConnections, "in_use", db.Stats().InUse, "idle", db.Stats().Idle)
+			}
+		}
+	}(ctx)
+
+	srv := server.New(authToken, log.With("component", "server"))
+	go srv.Start(ctx)
+
+	cdSvc := cd.NewService(db, &srv, log.With("component", "cd_service"))
+	go cdSvc.StartPollLoop(ctx, errCh)
+
+	ret := 0
+
+	select {
+	case sig := <-sigChan:
+		log.Info("received signal, exiting", "signal", sig)
+		cancel()
+	case <-ctx.Done():
+		log.Info("shutting down application")
+	case <-errCh:
+		ret = 1
+		cancel()
+	}
+
+	timeout := time.NewTimer(5 * time.Second)
+	// wait for server to shut down
+	select {
+	case <-timeout.C:
+		log.Error("server took too long to shut down, continuing shutdown procedure")
+		ret = 1
+	case <-srv.ShutdownCh():
+		log.Info("server shutdown complete")
+		timeout.Stop()
+	}
+
+	timeout.Reset(5 * time.Second)
+	// wait for CD service to shut down
+	select {
+	case <-timeout.C:
+		log.Error("CD service took too long to shut down, continuing shutdown procedure")
+		ret = 1
+	case <-cdSvc.ShutdownCh():
+		log.Info("CD service shutdown complete")
+		timeout.Stop()
+	}
+
+	log.Info("exiting")
+	os.Exit(ret)
 }
