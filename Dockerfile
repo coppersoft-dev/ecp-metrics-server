@@ -19,6 +19,7 @@ RUN go mod download
 # copy source code
 COPY main.go main.go
 COPY cd cd
+COPY server server
 
 # build
 ARG TARGETPLATFORM
