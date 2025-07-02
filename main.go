@@ -59,6 +59,14 @@ func main() {
 	dbUser := os.Getenv("CD_DB_USER")
 	dbPass := os.Getenv("CD_DB_PASS")
 	authToken := os.Getenv("AUTH_TOKEN")
+	lHost := os.Getenv("LISTEN_HOST")
+	if lHost == "" {
+		lHost = "127.0.0.1" // safe fallback
+	}
+	lPort := os.Getenv("LISTEN_PORT")
+	if lPort == "" {
+		lPort = "8080"
+	}
 
 	logLevel := new(slog.LevelVar)
 	logLevel.Set(slog.LevelInfo)
@@ -112,7 +120,7 @@ func main() {
 		}
 	}(ctx)
 
-	srv := server.New(authToken, log.With("component", "server"))
+	srv := server.New(authToken, lHost, lPort, log.With("component", "server"))
 	go srv.Start(ctx)
 
 	cdSvc := cd.NewService(db, &srv, log.With("component", "cd_service"))

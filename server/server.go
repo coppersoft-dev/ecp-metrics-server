@@ -16,6 +16,8 @@ import (
 
 type Server struct {
 	authToken    string
+	host         string
+	port         string
 	cdComponents types.Components
 	compMux      sync.RWMutex
 	log          *slog.Logger
@@ -43,10 +45,12 @@ func (s *Server) authReq(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func New(authToken string, log *slog.Logger) Server {
+func New(authToken string, host, port string, log *slog.Logger) Server {
 	return Server{
 		authToken:  authToken,
 		log:        log,
+		host:       host,
+		port:       port,
 		shutdownCh: make(chan struct{}),
 	}
 }
@@ -84,7 +88,7 @@ func (s *Server) Start(ctx context.Context) {
 
 	srv := http.Server{
 		Handler: srvMux,
-		Addr:    "127.0.0.1:8080",
+		Addr:    s.host + ":" + s.port,
 	}
 
 	go func() {
