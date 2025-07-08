@@ -115,7 +115,7 @@ func main() {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				log.Info("db stats", "max_open_conns", db.Stats().MaxOpenConnections, "in_use", db.Stats().InUse, "idle", db.Stats().Idle)
+				log.Debug("db stats", "max_open_conns", db.Stats().MaxOpenConnections, "in_use", db.Stats().InUse, "idle", db.Stats().Idle)
 			}
 		}
 	}(ctx)
