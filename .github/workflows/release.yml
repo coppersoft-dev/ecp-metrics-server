@@ -25,7 +25,7 @@ jobs:
       packages: write # for pushing and signing container images.
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
       - name: Install Flux CLI
         uses: fluxcd/flux2/action@bb9a119456aea08b4d3b04d99b49b4485c6d80f4 # v2.6.0
         with:
