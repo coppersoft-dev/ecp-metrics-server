@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"log/slog"
 
-	"go.e13.dev/playground/ecp-metrics-server/cd/types"
+	"github.com/coppersoft-dev/ecp-metrics-server/cd/types"
 )
 
 type ComponentsSetter interface {

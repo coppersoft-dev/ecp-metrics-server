@@ -1,4 +1,4 @@
-module go.e13.dev/playground/ecp-metrics-server
+module github.com/coppersoft-dev/ecp-metrics-server
 
 go 1.24.3
 

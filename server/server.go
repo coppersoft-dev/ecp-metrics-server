@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"go.e13.dev/playground/ecp-metrics-server/cd"
-	"go.e13.dev/playground/ecp-metrics-server/cd/types"
+	"github.com/coppersoft-dev/ecp-metrics-server/cd"
+	"github.com/coppersoft-dev/ecp-metrics-server/cd/types"
 )
 
 type Server struct {

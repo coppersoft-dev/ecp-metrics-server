@@ -13,8 +13,8 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"go.e13.dev/playground/ecp-metrics-server/cd"
-	"go.e13.dev/playground/ecp-metrics-server/server"
+	"github.com/coppersoft-dev/ecp-metrics-server/cd"
+	"github.com/coppersoft-dev/ecp-metrics-server/server"
 )
 
 func parseVerbosity(v string) (*int, error) {
