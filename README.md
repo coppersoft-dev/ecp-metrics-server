@@ -1,6 +1,6 @@
 # ECP Metrics Server
 
-This application gathers information from an ECP network and exposes it in a Prometheus-compatible format. The use case for ECP Metrics Server is gathering more insight into an ECP network than what ECP doesn't expose out-of-the-box (e.g. the versions of registered ECP components).
+This application gathers information from an ECP network and exposes it in a Prometheus-compatible format. The use case for ECP Metrics Server is gathering more insight into an ECP network than what ECP exposes out-of-the-box (e.g. the versions of registered ECP components).
 
 ## Exposed Metrics
 
