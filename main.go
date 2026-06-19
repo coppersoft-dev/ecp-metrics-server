@@ -103,7 +103,7 @@ func main() {
 	defer db.Close()
 
 	// set reasonable connection pooling limits. These limits
-	// are rather low because the applcation currently really
+	// are rather low because the application currently really
 	// only needs a single open connection.
 	db.SetMaxOpenConns(5)
 	db.SetMaxIdleConns(3)
