@@ -27,7 +27,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install Flux CLI
-        uses: fluxcd/flux2/action@bb9a119456aea08b4d3b04d99b49b4485c6d80f4 # v2.6.0
+        uses: fluxcd/flux2/action@efc030ffe40845dc3787b89f05b9cb89ee9f9934 # v2.6.0
         with:
           version: 'v2.5.1'
       - name: Prepare
